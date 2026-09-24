@@ -1,37 +1,66 @@
-# affiliate-ai-platform — シリーズ② 第2回
+# affiliate-ai-platform — シリーズ② 第3回
 
-第1回のVPS/Docker/MCP/PostgreSQL/Dify構成をそのまま含み、
-第2回の ProductService + Provider を統合した完全版ソースです。
+第1回・第2回の構成をすべて含み、第3回のDify Workflowから
+記事下書きをPostgreSQLへ保存できるようにした統合版ソースです。
 
-## 第2回で追加されたもの
+## 第2回までに含まれるもの
 
-- `models/product.py` — 共通Productモデル
-- `providers/base.py` — Providerインターフェース
-- `providers/rakuten_provider.py`
-- `providers/yahoo_provider.py`
-- `services/product_service.py`
-- `search_products(keyword, provider, hits)` のProvider対応
-- `products.provider`
+- Linux VPS + Docker + Streamable HTTP MCP
+- PostgreSQL
+- `Product` 共通モデル
+- `RakutenProvider`
+- `YahooProvider`
+- `ProductService`
+- `search_products(keyword, provider, hits)`
+- `provider=rakuten / yahoo / all`
 - `UNIQUE(provider, item_code)`
-- `.env.example` の `YAHOO_APP_ID`
 
-## 既存 `.env` を使う場合
+## 第3回で追加・更新したもの
 
-VPS上の第1回 `.env` は上書きせず、次だけ追記してください。
+- `services/article_service.py`
+- `tools/article_tools.py` の `save_article` をDify Workflow向けに拡張
+- SELECT_PRODUCTの商品オブジェクトを `product` として保存可能
+- 商品UPSERT + 記事INSERTを同一トランザクションで実行
+- `docs/dify-workflow.md`
+
+商品選定・キーワード選定・記事生成そのものはDifyのLLMノードで行うため、
+Python側へOpenAI API呼び出しコードは追加していません。
+
+## 既存 `.env`
+
+第2回の `.env` をそのまま利用します。OpenAI APIキーはDify側で管理します。
 
 ```env
 YAHOO_APP_ID=発行されたClient ID
 ```
 
-## 検証順
+## VPS反映
 
-```text
-provider=rakuten
-provider=yahoo
-provider=all
+```bash
+cd /home/ubuntu/affiliate-ai-platform
+sudo docker compose config
+sudo docker compose up -d --build
+sudo docker compose ps
+sudo docker compose logs -f mcp
 ```
 
-`provider=all, hits=5` は、楽天最大5件 + Yahoo最大5件です。
+MCP Tool定義が変わるため、再ビルド後はDifyの
+「連携 → ツール → MCP → Affiliate MCP Server」でToolリストを更新してください。
 
-Yahoo!の商品検索APIで返る通常の `url` は、現段階では
-`affiliate_url` とみなしていません。
+## 第3回 Workflow
+
+```text
+ユーザー入力
+ ↓
+SEARCH_PRODUCTS
+ ↓
+SELECT_PRODUCT
+ ↓
+SELECT_KEYWORD
+ ↓
+GENERATE_ARTICLE
+ ↓
+SAVE_ARTICLE
+ ↓
+出力
+```

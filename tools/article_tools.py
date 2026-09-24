@@ -1,9 +1,14 @@
 from mcp_app import mcp
 import db
 
+from services.article_service import ArticleService
+
+article_service = ArticleService()
+
 
 @mcp.tool()
 def list_article_candidates(limit: int = 10) -> list[dict]:
+    """保存済み商品から記事候補を取得する。"""
     limit = max(1, min(limit, 50))
     with db.get_connection() as conn, conn.cursor() as cur:
         cur.execute(
@@ -34,6 +39,7 @@ def list_article_candidates(limit: int = 10) -> list[dict]:
 
 @mcp.tool()
 def check_duplicate_article(product_id: int, keyword: str) -> dict:
+    """商品IDとキーワードの組み合わせで既存記事を確認する。"""
     if not keyword.strip():
         raise ValueError("キーワードを指定してください。")
     keyword = keyword.strip()
@@ -59,40 +65,30 @@ def check_duplicate_article(product_id: int, keyword: str) -> dict:
 
 @mcp.tool()
 def save_article(
-    product_id: int,
     title: str,
     keyword: str,
     content: str,
+    product_id: int | None = None,
+    product: dict | None = None,
     wordpress_post_id: int | None = None,
     status: str = "draft",
 ) -> dict:
-    if not title.strip():
-        raise ValueError("記事タイトルを指定してください。")
-    if not keyword.strip():
-        raise ValueError("キーワードを指定してください。")
-    if not content.strip():
-        raise ValueError("記事本文を指定してください。")
+    """
+    Difyで生成した記事下書きを保存する。
 
-    with db.get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO articles (
-                product_id, title, keyword, content,
-                wordpress_post_id, status
-            )
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id
-            """,
-            (
-                product_id,
-                title.strip(),
-                keyword.strip(),
-                content,
-                wordpress_post_id,
-                status,
-            ),
-        )
-        article_id = cur.fetchone()[0]
-        conn.commit()
+    第3回では SELECT_PRODUCT の商品オブジェクトを product に渡せる。
+    product_id が未指定の場合は、product を products テーブルへUPSERTして
+    得られたIDを articles.product_id に使用する。
 
-    return {"article_id": article_id, "status": status}
+    第2回までのように、すでに保存済みの商品IDを product_id で指定する
+    呼び出し方も利用できる。
+    """
+    return article_service.save_article(
+        title=title,
+        keyword=keyword,
+        content=content,
+        product_id=product_id,
+        product=product,
+        wordpress_post_id=wordpress_post_id,
+        status=status,
+    )
