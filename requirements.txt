@@ -1,0 +1,4 @@
+mcp[cli]>=2,<3
+httpx
+python-dotenv
+psycopg[binary]
