@@ -1,43 +1,36 @@
 import os
-
 import httpx
-from dotenv import load_dotenv
-
-load_dotenv()
-
-WORDPRESS_URL = os.environ.get("WORDPRESS_URL", "").rstrip("/")
-WORDPRESS_USER = os.environ.get("WORDPRESS_USER", "")
-WORDPRESS_APP_PASSWORD = os.environ.get("WORDPRESS_APP_PASSWORD", "")
 
 
 def _auth():
-    if not WORDPRESS_URL or not WORDPRESS_USER or not WORDPRESS_APP_PASSWORD:
-        raise RuntimeError("WordPress接続情報が未設定です。.env を確認してください。")
-    return (WORDPRESS_USER, WORDPRESS_APP_PASSWORD)
+    return (os.environ["WORDPRESS_USER"], os.environ["WORDPRESS_APP_PASSWORD"])
 
 
-def create_post(title: str, content: str, status: str = "draft") -> dict:
-    with httpx.Client(timeout=20.0, auth=_auth()) as client:
-        response = client.post(
-            f"{WORDPRESS_URL}/wp-json/wp/v2/posts",
-            json={"title": title, "content": content, "status": status},
-        )
-        response.raise_for_status()
-        return response.json()
+def create_draft(title: str, content: str) -> dict:
+    response=httpx.post(
+        f'{os.environ["WORDPRESS_URL"].rstrip("/")}/wp-json/wp/v2/posts',
+        auth=_auth(), json={"title":title,"content":content,"status":"draft"}, timeout=30.0
+    )
+    response.raise_for_status()
+    return response.json()
 
 
 def get_post(post_id: int) -> dict:
-    with httpx.Client(timeout=20.0, auth=_auth()) as client:
-        response = client.get(f"{WORDPRESS_URL}/wp-json/wp/v2/posts/{post_id}")
-        response.raise_for_status()
-        return response.json()
+    response=httpx.get(
+        f'{os.environ["WORDPRESS_URL"].rstrip("/")}/wp-json/wp/v2/posts/{post_id}',
+        auth=_auth(), timeout=30.0
+    )
+    response.raise_for_status()
+    return response.json()
 
 
-def update_post(post_id: int, fields: dict) -> dict:
-    with httpx.Client(timeout=20.0, auth=_auth()) as client:
-        response = client.post(
-            f"{WORDPRESS_URL}/wp-json/wp/v2/posts/{post_id}",
-            json=fields,
-        )
-        response.raise_for_status()
-        return response.json()
+def update_draft(post_id: int, title: str | None=None, content: str | None=None) -> dict:
+    payload={}
+    if title is not None: payload["title"]=title
+    if content is not None: payload["content"]=content
+    response=httpx.post(
+        f'{os.environ["WORDPRESS_URL"].rstrip("/")}/wp-json/wp/v2/posts/{post_id}',
+        auth=_auth(), json=payload, timeout=30.0
+    )
+    response.raise_for_status()
+    return response.json()

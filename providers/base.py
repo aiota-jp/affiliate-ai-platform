@@ -11,6 +11,3 @@ class ProductProvider(ABC):
     @abstractmethod
     def search_products(self, keyword: str, hits: int = 20) -> list[Product]:
         raise NotImplementedError
-
-    def get_product(self, item_code: str) -> Product | None:
-        raise NotImplementedError

@@ -1,66 +1,85 @@
-# affiliate-ai-platform — シリーズ② 第3回
+# affiliate-ai-platform Series 2 Episode 4 Complete
 
-第1回・第2回の構成をすべて含み、第3回のDify Workflowから
-記事下書きをPostgreSQLへ保存できるようにした統合版ソースです。
+第1回〜第4回までを1つに統合したVPS/Docker用ソースです。
 
-## 第2回までに含まれるもの
-
-- Linux VPS + Docker + Streamable HTTP MCP
+## 含む機能
+- Streamable HTTP MCP Server
 - PostgreSQL
-- `Product` 共通モデル
-- `RakutenProvider`
-- `YahooProvider`
-- `ProductService`
-- `search_products(keyword, provider, hits)`
-- `provider=rakuten / yahoo / all`
-- `UNIQUE(provider, item_code)`
+- Rakuten / Yahoo Provider
+- ProductService
+- Product / Article / WordPress MCP Tools
+- 第3回 `save_article(product=...)` による商品UPSERT + 記事保存
+- 第4回 Agent Harness
+  - Validator
+  - Retry基盤
+  - State
+  - Idempotency
+  - Logging
 
-## 第3回で追加・更新したもの
-
-- `services/article_service.py`
-- `tools/article_tools.py` の `save_article` をDify Workflow向けに拡張
-- SELECT_PRODUCTの商品オブジェクトを `product` として保存可能
-- 商品UPSERT + 記事INSERTを同一トランザクションで実行
-- `docs/dify-workflow.md`
-
-商品選定・キーワード選定・記事生成そのものはDifyのLLMノードで行うため、
-Python側へOpenAI API呼び出しコードは追加していません。
-
-## 既存 `.env`
-
-第2回の `.env` をそのまま利用します。OpenAI APIキーはDify側で管理します。
-
-```env
-YAHOO_APP_ID=発行されたClient ID
-```
-
-## VPS反映
+## 初回
+`.env.example` を `.env` にコピーし、実値を設定してください。
 
 ```bash
-cd /home/ubuntu/affiliate-ai-platform
+cp .env.example .env
 sudo docker compose config
 sudo docker compose up -d --build
 sudo docker compose ps
-sudo docker compose logs -f mcp
+sudo docker compose logs --tail=50 mcp
 ```
 
-MCP Tool定義が変わるため、再ビルド後はDifyの
-「連携 → ツール → MCP → Affiliate MCP Server」でToolリストを更新してください。
+既存DBを利用する場合、`db.py` の `init_db()` は既存テーブルを削除しません。
+ただし既存スキーマとの差異がある環境では、バックアップを取ってから確認してください。
 
-## 第3回 Workflow
+## Dify
+再ビルド後:
+`連携 → ツール → MCP → Affiliate MCP Server → 更新`
+
+第4回はまず `validate_product` から単体確認してください。
+
+## 注意
+- `.env` は同梱していません。
+- PostgreSQL 5432 / MCP 8000 はホストへ公開していません。
+- `proxy` Docker network は既存Nginx Proxy Manager側で作成済みの前提です。
+- Retry基盤は含みますが、既存ProviderのHTTP呼び出しへはまだ強制適用していません。第4回の段階検証で組み込みます。
+
+
+## MCP SDK 2.x
+
+この完全版は MCP Python SDK 2.x を使用します。
+
+```python
+from mcp.server.mcpserver import MCPServer
+
+mcp = MCPServer("affiliate-mcp-server")
+```
+
+`FastMCP` は使用しません。
+
+確認:
+
+```bash
+grep -R "FastMCP" -n . --exclude-dir=.git
+```
+
+何も表示されないことを確認してください。
+
+## VPSへ反映後の再ビルド
+
+```bash
+cd /home/ubuntu/affiliate-ai-platform
+
+sudo docker compose down
+sudo docker compose build --no-cache mcp
+sudo docker compose up -d
+
+sudo docker compose ps
+sudo docker compose logs --tail=50 mcp
+```
+
+正常時はMCPログに次の内容が表示されます。
 
 ```text
-ユーザー入力
- ↓
-SEARCH_PRODUCTS
- ↓
-SELECT_PRODUCT
- ↓
-SELECT_KEYWORD
- ↓
-GENERATE_ARTICLE
- ↓
-SAVE_ARTICLE
- ↓
-出力
+StreamableHTTP session manager started
+Application startup complete.
+Uvicorn running on http://0.0.0.0:8000
 ```

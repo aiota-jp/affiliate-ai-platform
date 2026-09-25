@@ -1,9 +1,5 @@
 FROM python:3.12-slim
 
-ENV PYTHONUTF8=1
-ENV PYTHONIOENCODING=UTF-8
-ENV LANG=C.UTF-8
-
 WORKDIR /app
 
 COPY requirements.txt .
@@ -14,7 +10,7 @@ COPY models/ ./models/
 COPY providers/ ./providers/
 COPY services/ ./services/
 COPY tools/ ./tools/
-
-EXPOSE 8000
+COPY harness/ ./harness/
+COPY sql/ ./sql/
 
 CMD ["python", "server.py"]

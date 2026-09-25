@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass, field
 
 
-@dataclass(slots=True)
+@dataclass
 class Product:
     provider: str
     item_code: str
