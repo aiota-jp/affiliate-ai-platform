@@ -6,7 +6,6 @@ from mcp_app import mcp
 import tools.product_tools  # noqa: F401
 import tools.article_tools  # noqa: F401
 import tools.wordpress_tools  # noqa: F401
-import tools.harness_tools  # noqa: F401
 from db import init_db
 
 

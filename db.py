@@ -45,52 +45,56 @@ def init_db():
             updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
         """)
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS workflow_runs (
-            id BIGSERIAL PRIMARY KEY,
-            run_key VARCHAR(64) NOT NULL UNIQUE,
-            keyword TEXT,
-            provider VARCHAR(50),
-            item_code TEXT,
-            status VARCHAR(50) NOT NULL,
-            current_step VARCHAR(100),
-            error_message TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS workflow_logs (
-            id BIGSERIAL PRIMARY KEY,
-            run_key VARCHAR(64) NOT NULL,
-            level VARCHAR(20) NOT NULL,
-            step VARCHAR(100),
-            message TEXT NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_workflow_logs_run_key ON workflow_logs(run_key)")
+
 
 
 def upsert_product(product: dict) -> int:
+    """商品をproductsテーブルへUPSERTし、products.idを返す。"""
+    required = ("item_code", "name", "url")
+    missing = [key for key in required if not product.get(key)]
+    if missing:
+        raise ValueError(f"missing required product fields: {', '.join(missing)}")
+
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("""
-        INSERT INTO products(
-            provider,item_code,name,price,url,affiliate_url,image_urls,
-            catchcopy,description,genre_id,review_count,review_average
-        ) VALUES(%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s)
-        ON CONFLICT(provider,item_code) DO UPDATE SET
-            name=EXCLUDED.name, price=EXCLUDED.price, url=EXCLUDED.url,
-            affiliate_url=EXCLUDED.affiliate_url, image_urls=EXCLUDED.image_urls,
-            catchcopy=EXCLUDED.catchcopy, description=EXCLUDED.description,
-            genre_id=EXCLUDED.genre_id, review_count=EXCLUDED.review_count,
-            review_average=EXCLUDED.review_average, updated_at=CURRENT_TIMESTAMP
-        RETURNING id
-        """,(
-            product["provider"],product["item_code"],product["name"],int(product.get("price") or 0),
-            product.get("url") or "",product.get("affiliate_url"),
-            json.dumps(product.get("image_urls") or [],ensure_ascii=False),
-            product.get("catchcopy"),product.get("description"),product.get("genre_id"),
-            product.get("review_count"),product.get("review_average"),
-        ))
-        return cur.fetchone()["id"]
+        cur.execute(
+            """
+            INSERT INTO products (
+                provider, item_code, name, price, url, affiliate_url,
+                image_urls, catchcopy, description, genre_id,
+                review_count, review_average
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s)
+            ON CONFLICT (provider, item_code)
+            DO UPDATE SET
+                name=EXCLUDED.name,
+                price=EXCLUDED.price,
+                url=EXCLUDED.url,
+                affiliate_url=EXCLUDED.affiliate_url,
+                image_urls=EXCLUDED.image_urls,
+                catchcopy=EXCLUDED.catchcopy,
+                description=EXCLUDED.description,
+                genre_id=EXCLUDED.genre_id,
+                review_count=EXCLUDED.review_count,
+                review_average=EXCLUDED.review_average,
+                updated_at=CURRENT_TIMESTAMP
+            RETURNING id
+            """,
+            (
+                product.get("provider") or "rakuten",
+                product["item_code"],
+                product["name"],
+                int(product.get("price") or 0),
+                product["url"],
+                product.get("affiliate_url"),
+                json.dumps(product.get("image_urls") or [], ensure_ascii=False),
+                product.get("catchcopy"),
+                product.get("description"),
+                product.get("genre_id"),
+                product.get("review_count"),
+                product.get("review_average"),
+            ),
+        )
+        row = cur.fetchone()
+        if row is None:
+            raise RuntimeError("failed to upsert product")
+        return int(row["id"])

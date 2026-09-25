@@ -8,6 +8,8 @@ services:
       MCP_HOST: 0.0.0.0
       MCP_PORT: 8000
       MCP_PATH: /mcp
+      DIFY_API_URL: ${DIFY_API_URL}
+      DIFY_API_KEY: ${DIFY_API_KEY}
     depends_on:
       db:
         condition: service_healthy

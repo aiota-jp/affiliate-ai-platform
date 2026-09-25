@@ -83,3 +83,13 @@ StreamableHTTP session manager started
 Application startup complete.
 Uvicorn running on http://0.0.0.0:8000
 ```
+
+## Series 2 source mapping
+
+- Episode 1: Docker / MCP Server / PostgreSQL / basic tools
+- Episode 2: Product model / Provider / ProductService / Rakuten & Yahoo Shopping
+- Episode 3: ArticleService / article MCP tools / Dify workflow documentation
+- Episode 4: `harness/` and `test_harness.py`
+
+Episode 4 deliberately keeps Agent Harness independent from Dify.
+Episode 5 will connect `AgentHarnessRunner` to the Dify Workflow API and cron.

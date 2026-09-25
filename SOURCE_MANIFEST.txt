@@ -1,0 +1,40 @@
+Affiliate AI Platform - Series 2 Episodes 1-4
+
+Episode 1
+- Docker / MCP Server / PostgreSQL
+- server.py / mcp_app.py / db.py / compose.yaml / Dockerfile
+
+Episode 2
+- Product model / Provider / ProductService
+- Rakuten / Yahoo Shopping providers
+
+Episode 3
+- ArticleService / article tools
+- Dify Workflow documentation
+
+Episode 4
+- Python Agent Harness
+- Validator / Retry / State / Idempotency / Logging
+- harness/runner.py
+- test_harness.py
+
+Important Docker fixes
+- sql/.gitkeep is included so COPY sql/ ./sql/ always has a source directory.
+- Dockerfile explicitly copies test_harness.py to /app/test_harness.py.
+- harness/ is copied to /app/harness/.
+
+Local verification
+  python -m compileall -q .
+  python test_harness.py
+
+VPS / Docker verification
+  sudo docker compose config
+  sudo docker compose build --no-cache mcp
+  sudo docker compose up -d
+  sudo docker compose ps
+  sudo docker compose exec mcp ls -la /app/test_harness.py
+  sudo docker compose exec mcp ls -la /app/harness/runner.py
+  sudo docker compose exec mcp python /app/test_harness.py
+
+Expected final message
+  All Agent Harness tests passed.

@@ -1,4 +1,16 @@
 import logging
-logger=logging.getLogger("affiliate-agent-harness")
-def log_event(level: str,run_key: str,step: str,message: str)->None:
-    getattr(logger,level.lower(),logger.info)(f"run_key={run_key} step={step} message={message}")
+
+
+def create_logger(name: str = "agent-harness") -> logging.Logger:
+    logger = logging.getLogger(name)
+
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(
+            "%(asctime)s %(levelname)s %(name)s %(message)s"
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+    logger.setLevel(logging.INFO)
+    return logger
